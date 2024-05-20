@@ -1,0 +1,21 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Weather App";
+}
+
+<h1>Weather App</h1>
+
+<form method="get">
+    <label for="city">City:</label>
+    <input type="text" id="city" name="city" value="@Model.City" />
+    <button type="submit">Get Weather</button>
+</form>
+
+@if (Model.Weather != null)
+{
+    <h2>Weather for @Model.City</h2>
+    <p><strong>Condition:</strong> @Model.Weather.Current.Condition.Text</p>
+    <p><img src="@Model.Weather.Current.Condition.Icon" alt="Weather icon" /></p>
+    <p><strong>Temperature:</strong> @Model.Weather.Current.TempC &deg;C (@Model.Weather.Current.TempF &deg;F)</p>
+}
