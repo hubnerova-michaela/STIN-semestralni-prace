@@ -1,21 +1,48 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Weather App";
+    ViewData["Title"] = "Weather Forecast";
 }
 
-<h1>Weather App</h1>
+<h2>Weather Forecast</h2>
 
-<form method="get">
-    <label for="city">City:</label>
-    <input type="text" id="city" name="city" value="@Model.City" />
+<form method="post">
+    <label for="city">Enter city name:</label>
+    <input type="hidden" asp-for="IsPremium" />
+    <input type="text" id="city" name="city" required />
     <button type="submit">Get Weather</button>
 </form>
 
-@if (Model.Weather != null)
+@if (Model.CurrentWeather != null)
 {
-    <h2>Weather for @Model.City</h2>
-    <p><strong>Condition:</strong> @Model.Weather.Current.Condition.Text</p>
-    <p><img src="@Model.Weather.Current.Condition.Icon" alt="Weather icon" /></p>
-    <p><strong>Temperature:</strong> @Model.Weather.Current.TempC &deg;C (@Model.Weather.Current.TempF &deg;F)</p>
+    <h3>Current Weather for @Model.CurrentWeather.Location.Name</h3>
+    <p>Temperature: @Model.CurrentWeather.Current.TempC°C</p>
+    <p>Condition: @Model.CurrentWeather.Current.Condition.Text</p>
+    <img src="@Model.CurrentWeather.Current.Condition.Icon" alt="Weather Icon" />
+}
+
+@if (Model.IsPremium && Model.HistoricalWeatherList != null)
+{
+    <h3>Weather History (Past 7 Days)</h3>
+    <ul>
+        @foreach (var history in Model.HistoricalWeatherList)
+        {
+            <li>
+                <strong>@history.Location.Name</strong><br />
+                Date: @history.Forecast.ForecastDays[0].Date.ToShortDateString() <br />
+                Max Temp: @history.Forecast.ForecastDays[0].Day.MaxTempC°C<br />
+                Min Temp: @history.Forecast.ForecastDays[0].Day.MinTempC°C<br />
+                Avg Temp: @history.Forecast.ForecastDays[0].Day.AvgTempC°C<br />
+                Condition: @history.Forecast.ForecastDays[0].Day.Condition.Text<br />
+            </li>
+        }
+    </ul>
+}
+else if (Model.IsPremium && Model.HistoricalWeatherList == null)
+{
+    <p>No historical weather data available.</p>
+}
+else
+{
+    <p>You need to be a premium user to view weather history.</p>
 }
