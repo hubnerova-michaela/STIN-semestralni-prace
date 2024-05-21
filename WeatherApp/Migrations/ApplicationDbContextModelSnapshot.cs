@@ -8,7 +8,7 @@ using WeatherApp.Data;
 
 #nullable disable
 
-namespace WeatherApp.Data.Migrations
+namespace WeatherApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     partial class ApplicationDbContextModelSnapshot : ModelSnapshot
@@ -250,39 +250,6 @@ namespace WeatherApp.Data.Migrations
                     b.ToTable("FavoritePlaces");
                 });
 
-            modelBuilder.Entity("WeatherApp.Model.WeatherHistory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("City")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Condition")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("DateTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<double>("Temperature")
-                        .HasColumnType("float");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("WeatherHistories");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -337,7 +304,7 @@ namespace WeatherApp.Data.Migrations
             modelBuilder.Entity("WeatherApp.Model.FavoritePlace", b =>
                 {
                     b.HasOne("WeatherApp.Model.ApplicationUser", "User")
-                        .WithMany()
+                        .WithMany("FavoritePlaces")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -345,15 +312,9 @@ namespace WeatherApp.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("WeatherApp.Model.WeatherHistory", b =>
+            modelBuilder.Entity("WeatherApp.Model.ApplicationUser", b =>
                 {
-                    b.HasOne("WeatherApp.Model.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
+                    b.Navigation("FavoritePlaces");
                 });
 #pragma warning restore 612, 618
         }

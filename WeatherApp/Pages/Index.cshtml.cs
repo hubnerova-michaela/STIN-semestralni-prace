@@ -1,12 +1,9 @@
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using WeatherApp.Services;
-using WeatherApp.Model;
+using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using Microsoft.EntityFrameworkCore;
 using WeatherApp.Data;
-
+using WeatherApp.Model;
+using WeatherApp.Services;
 
 public class IndexModel : PageModel
 {
