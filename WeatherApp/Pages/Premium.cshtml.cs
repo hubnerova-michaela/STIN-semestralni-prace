@@ -35,6 +35,6 @@ public class PremiumModel : PageModel
                 await _userManager.UpdateAsync(user);
             }
         }
-        return RedirectToPage();
+        return RedirectToPage("/Index");
     }
 }
