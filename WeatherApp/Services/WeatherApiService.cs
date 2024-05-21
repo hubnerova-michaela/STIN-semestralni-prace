@@ -50,6 +50,21 @@ namespace WeatherApp.Services
             return historicalWeatherList;
         }
 
+        public async Task<ForecastWeather> GetForecastAsync(string city)
+        {
+            var response = await _httpClient.GetAsync($"forecast.json?q={city}&key={_configuration.Value.ApiKey}&days=7");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                // Handle error
+                return null;
+            }
+
+            var responseMessage = await response.Content.ReadAsStringAsync();
+            var forecast = JsonConvert.DeserializeObject<ForecastWeather>(responseMessage);
+            return forecast;
+        }
+
     }
 
 
@@ -58,6 +73,7 @@ namespace WeatherApp.Services
         public Task<CurrentWeather> GetWeatherAsync(string city);
         public Task<HistoricalWeather> GetHistoricalWeatherAsync(string city, DateTime date);
         Task<List<HistoricalWeather>> GetHistoricalWeatherForPastWeekAsync(string city);
+        Task<ForecastWeather> GetForecastAsync(string city);
 
     }
 
