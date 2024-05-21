@@ -1,40 +1,62 @@
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using WeatherApp.Model;
 using WeatherApp.Services;
+using WeatherApp.Model;
+using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
+using WeatherApp.Data;
 
-namespace WeatherApp.Pages
+
+public class IndexModel : PageModel
 {
-    public class IndexModel : PageModel
+    private readonly IWeatherApiService _weatherApiService;
+    private readonly ApplicationDbContext _dbContext;
+
+    public IndexModel(IWeatherApiService weatherApiService, ApplicationDbContext dbContext)
     {
-        private readonly ILogger<IndexModel> _logger;
-        private readonly IWeatherApiService _weatherApiService;
+        _weatherApiService = weatherApiService;
+        _dbContext = dbContext;
+    }
 
+    [BindProperty]
+    public CurrentWeather CurrentWeather { get; set; }
 
-        public IndexModel(ILogger<IndexModel> logger, IWeatherApiService weatherApiService)
+    [BindProperty(SupportsGet = true)]
+    public bool IsPremium { get; set; }
+    public List<HistoricalWeather> HistoricalWeatherList { get; set; }
+
+    public async Task OnGetAsync()
+    {
+        if (User.Identity.IsAuthenticated)
         {
-            _logger = logger;
-            _weatherApiService = weatherApiService;
-        }
-
-        [BindProperty(SupportsGet = true)]
-        public string City { get; set; }
-
-        public CurrentWeather Weather { get; set; }
-
-        public async Task OnGetAsync()
-        {
-            if (!string.IsNullOrEmpty(City))
+            //var user = await _userManager.GetUserAsync(User);
+            var userId = User.Claims.Where(c => c.Type == ClaimTypes.NameIdentifier).FirstOrDefault().Value;
+            if (userId != null)
             {
-                Weather = await _weatherApiService.GetWeatherAsync(City);
+                var user = await _dbContext.FindAsync<ApplicationUser>(userId);
+                if (user?.IsPremium == true)
+                {
+                    IsPremium = true;
+                }
+                else IsPremium = false;
+            }
+        }
+    }
+
+
+    public async Task<IActionResult> OnPostAsync(string city)
+    {
+        if (!string.IsNullOrWhiteSpace(city))
+        {
+            CurrentWeather = await _weatherApiService.GetWeatherAsync(city);
+
+            if (IsPremium)
+            {
+                HistoricalWeatherList = await _weatherApiService.GetHistoricalWeatherForPastWeekAsync(city);
             }
         }
 
-        //public void OnPost()
-        //{
-        //    string city = Request.Form["city"];
-        //    var weatherData = _weatherApiService.GetWeatherAsync(city).Result;
-        //}
+        return Page();
     }
 }
