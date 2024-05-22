@@ -1,136 +1,237 @@
-﻿using Xunit;
-using Moq;
-using Microsoft.EntityFrameworkCore;
-using WeatherApp.Data;
-using WeatherApp.Model;
-using WeatherApp.Pages;
-using WeatherApp.Services;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using Moq;
+using WeatherApp.Data;
+using WeatherApp.Model;
+using WeatherApp.Services;
+using Xunit;
 
-namespace WeatherApp.Tests
+public class IndexModelTests
 {
-    public class IndexModelTests
+    private readonly Mock<IWeatherApiService> _mockWeatherApiService;
+
+    public IndexModelTests()
     {
-        private readonly Mock<IWeatherApiService> _mockWeatherApiService;
-        private readonly ApplicationDbContext _dbContext;
-        private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor;
-
-        public IndexModelTests()
-        {
-            //_mockWeatherApiService = new Mock<IWeatherApiService>();
-
-            //var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            //    .UseInMemoryDatabase(databaseName: "TestDb")
-            //    .Options;
-            //_dbContext = new ApplicationDbContext(options);
-
-            //_mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
-            //var claims = new List<Claim>
-            //{
-            //    new Claim(ClaimTypes.NameIdentifier, "1")
-            //};
-            //var identity = new ClaimsIdentity(claims, "TestAuthType");
-            //var claimsPrincipal = new ClaimsPrincipal(identity);
-
-            //var context = new DefaultHttpContext
-            //{
-            //    User = claimsPrincipal
-            //};
-
-            //_mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(context);
-
-            //// Seed the database with a user
-            //var user = new ApplicationUser { Id = "1", UserName = "testuser", IsPremium = true };
-            //_dbContext.Users.Add(user);
-            //_dbContext.SaveChanges();
-        }
-
-        [Fact]
-        public async Task OnGetAsync_UserIsAuthenticated_SetsIsPremium()
-        {
-            //// Arrange
-            //var pageModel = new IndexModel(_mockWeatherApiService.Object, _dbContext)
-            //{
-            //    PageContext = new Microsoft.AspNetCore.Mvc.RazorPages.PageContext
-            //    {
-            //        HttpContext = _mockHttpContextAccessor.Object.HttpContext
-            //    }
-            //};
-
-            //// Act
-            //await pageModel.OnGetAsync();
-
-            //// Assert
-            //Assert.True(pageModel.IsPremium);
-        }
-
-        [Fact]
-        public async Task OnPostAsync_ValidCity_ReturnsWeather()
-        {
-            //// Arrange
-            //var city = "TestCity";
-            //var currentWeather = new CurrentWeather
-            //{
-            //    Location = new Location { Name = city },
-            //    Current = new CurrentWeather { Current = new() { TempC = 25.5, Condition = new Condition { Text = "Sunny", Icon = "icon_url" } } }
-            //};
-
-            //var historicalWeatherList = new List<HistoricalWeather>
-            //{
-            //    new HistoricalWeather
-            //    {
-            //        Location = new Location { Name = city },
-            //        Forecast = new Forecast
-            //        {
-            //            ForecastDays = new List<ForecastDay>
-            //            {
-            //                new ForecastDay
-            //                {
-            //                    Date = DateTime.Now.AddDays(-1),
-            //                    Day = new Day
-            //                    {
-            //                        MaxTempC = 30,
-            //                        MinTempC = 20,
-            //                        AvgTempC = 25,
-            //                        Condition = new Condition { Text = "Partly cloudy" }
-            //                    }
-            //                }
-            //            }
-            //        }
-            //    }
-            //};
-
-            //_mockWeatherApiService.Setup(x => x.GetWeatherAsync(city)).ReturnsAsync(currentWeather);
-            //_mockWeatherApiService.Setup(x => x.GetHistoricalWeatherForPastWeekAsync(city)).ReturnsAsync(historicalWeatherList);
-
-            //var pageModel = new IndexModel(_mockWeatherApiService.Object, _dbContext)
-            //{
-            //    PageContext = new Microsoft.AspNetCore.Mvc.RazorPages.PageContext
-            //    {
-            //        HttpContext = _mockHttpContextAccessor.Object.HttpContext
-            //    }
-            //};
-
-            //// Act
-            //var result = await pageModel.OnPostAsync(city);
-
-            //// Assert
-            //Assert.NotNull(pageModel.CurrentWeather);
-            //Assert.Equal(city, pageModel.CurrentWeather.Location.Name);
-            //Assert.Equal(25.5, pageModel.CurrentWeather.Current.TempC);
-            //Assert.Equal("Sunny", pageModel.CurrentWeather.Current.Condition.Text);
-
-            //if (pageModel.IsPremium)
-            //{
-            //    Assert.NotNull(pageModel.HistoricalWeatherList);
-            //    Assert.Single(pageModel.HistoricalWeatherList);
-            //    Assert.Equal(30, pageModel.HistoricalWeatherList[0].Forecast.ForecastDays[0].Day.MaxTempC);
-            //}
-        }
+        _mockWeatherApiService = new Mock<IWeatherApiService>();
     }
-}
 
+    private ApplicationDbContext GetInMemoryDbContext(string databaseName)
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(databaseName)
+            .Options;
+        return new ApplicationDbContext(options);
+    }
+
+    private void SetUserClaims(IndexModel pageModel, string userId, bool isAuthenticated)
+    {
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId)
+        };
+
+        var identity = new ClaimsIdentity(claims, isAuthenticated ? "mock" : "");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+
+        pageModel.PageContext = new PageContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+    }
+
+    [Fact]
+    public async Task OnGetAsync_PopulatesCurrentLocationWeather()
+    {
+        // Arrange
+        var dbContext = GetInMemoryDbContext("TestDatabase_OnGetAsync_PopulatesCurrentLocationWeather");
+        var pageModel = new IndexModel(_mockWeatherApiService.Object, dbContext);
+
+        var locationWeather = new CurrentWeather
+        {
+            Location = new Location { Name = "Liberec" },
+            Current = new WeatherData { TempC = 10.0 }
+        };
+
+        _mockWeatherApiService.Setup(service => service.GetWeatherAsync("Liberec"))
+            .ReturnsAsync(locationWeather);
+
+        SetUserClaims(pageModel, "user1", true);
+
+        var user = new ApplicationUser { Id = "user1", IsPremium = true };
+        await dbContext.Users.AddAsync(user);
+        await dbContext.SaveChangesAsync();
+
+        // Act
+        await pageModel.OnGetAsync();
+
+        // Assert
+        Assert.NotNull(pageModel.CurrentLocationWeather);
+        Assert.Equal("Liberec", pageModel.CurrentLocationWeather.Location.Name);
+        Assert.Equal(10.0, pageModel.CurrentLocationWeather.Current.TempC);
+        Assert.Equal("Liberec", pageModel.CurrentLocation);
+        Assert.True(pageModel.IsPremium);
+    }
+
+    [Fact]
+    public async Task OnPostAsync_PopulatesCurrentWeatherAndHistoricalWeather_ForPremiumUser()
+    {
+        // Arrange
+        var dbContext = GetInMemoryDbContext("TestDatabase_OnPostAsync_PopulatesCurrentWeatherAndHistoricalWeather_ForPremiumUser");
+        var pageModel = new IndexModel(_mockWeatherApiService.Object, dbContext);
+
+        var city = "Prague";
+        var currentWeather = new CurrentWeather
+        {
+            Location = new Location { Name = city },
+            Current = new WeatherData { TempC = 12.0 }
+        };
+
+        var historicalWeather = new HistoricalWeather
+        {
+            Location = new Location { Name = city },
+            Forecast = new Forecast
+            {
+                ForecastDays = new[]
+                {
+                    new ForecastDay { Date = "2023-01-01", Day = new Day { AvgTempC = 5.0 } },
+                    new ForecastDay { Date = "2023-01-02", Day = new Day { AvgTempC = 6.0 } }
+                }
+            }
+        };
+
+        _mockWeatherApiService.Setup(service => service.GetWeatherAsync(city))
+            .ReturnsAsync(currentWeather);
+
+        _mockWeatherApiService.Setup(service => service.GetHistoricalWeatherForPastWeekAsync(city))
+            .ReturnsAsync(new List<HistoricalWeather> { historicalWeather });
+
+        pageModel.IsPremium = true;
+
+        // Act
+        var result = await pageModel.OnPostAsync(city);
+
+        // Assert
+        Assert.NotNull(pageModel.CurrentWeather);
+        Assert.Equal(city, pageModel.CurrentWeather.Location.Name);
+        Assert.Equal(12.0, pageModel.CurrentWeather.Current.TempC);
+        Assert.NotNull(pageModel.HistoricalWeatherList);
+        Assert.Single(pageModel.HistoricalWeatherList);
+        Assert.Equal(2, pageModel.HistoricalWeatherList[0].Forecast.ForecastDays.Length);
+        Assert.Equal(5.0, pageModel.HistoricalWeatherList[0].Forecast.ForecastDays[0].Day.AvgTempC);
+        Assert.Equal(6.0, pageModel.HistoricalWeatherList[0].Forecast.ForecastDays[1].Day.AvgTempC);
+    }
+
+    [Fact]
+    public async Task OnPostAsync_PopulatesOnlyCurrentWeather_ForNonPremiumUser()
+    {
+        // Arrange
+        var dbContext = GetInMemoryDbContext("TestDatabase_OnPostAsync_PopulatesOnlyCurrentWeather_ForNonPremiumUser");
+        var pageModel = new IndexModel(_mockWeatherApiService.Object, dbContext);
+
+        var city = "Prague";
+        var currentWeather = new CurrentWeather
+        {
+            Location = new Location { Name = city },
+            Current = new WeatherData { TempC = 12.0 }
+        };
+
+        _mockWeatherApiService.Setup(service => service.GetWeatherAsync(city))
+            .ReturnsAsync(currentWeather);
+
+        pageModel.IsPremium = false;
+
+        // Act
+        var result = await pageModel.OnPostAsync(city);
+
+        // Assert
+        Assert.NotNull(pageModel.CurrentWeather);
+        Assert.Equal(city, pageModel.CurrentWeather.Location.Name);
+        Assert.Equal(12.0, pageModel.CurrentWeather.Current.TempC);
+        Assert.Null(pageModel.HistoricalWeatherList);
+    }
+
+    [Fact]
+    public async Task OnPostAsync_WithEmptyCity_DoesNotPopulateWeather()
+    {
+        // Arrange
+        var dbContext = GetInMemoryDbContext("TestDatabase_OnPostAsync_WithEmptyCity_DoesNotPopulateWeather");
+        var pageModel = new IndexModel(_mockWeatherApiService.Object, dbContext);
+
+        string city = string.Empty;
+
+        // Act
+        var result = await pageModel.OnPostAsync(city);
+
+        // Assert
+        Assert.Null(pageModel.CurrentWeather);
+        Assert.Null(pageModel.HistoricalWeatherList);
+    }
+
+    //[Fact]
+    //public async Task OnGetAsync_NonAuthenticatedUser_SetsIsPremiumToFalse()
+    //{
+    //    // Arrange
+    //    var dbContext = GetInMemoryDbContext("TestDatabase_OnGetAsync_NonAuthenticatedUser_SetsIsPremiumToFalse");
+    //    var pageModel = new IndexModel(_mockWeatherApiService.Object, dbContext);
+    //    SetUserClaims(pageModel, null, false);
+
+    //    // Act
+    //    await pageModel.OnGetAsync();
+
+    //    // Assert
+    //    Assert.False(pageModel.IsPremium);
+    //}
+
+    //[Fact]
+    //public async Task OnGetAsync_WeatherServiceFails_SetsCurrentLocationWeatherToNull()
+    //{
+    //    // Arrange
+    //    var dbContext = GetInMemoryDbContext("TestDatabase_OnGetAsync_WeatherServiceFails_SetsCurrentLocationWeatherToNull");
+    //    var pageModel = new IndexModel(_mockWeatherApiService.Object, dbContext);
+
+    //    _mockWeatherApiService.Setup(service => service.GetWeatherAsync("Liberec"))
+    //        .ThrowsAsync(new System.Exception("Service failure"));
+
+    //    SetUserClaims(pageModel, "user1", true);
+
+    //    var user = new ApplicationUser { Id = "user1", IsPremium = true };
+    //    await dbContext.Users.AddAsync(user);
+    //    await dbContext.SaveChangesAsync();
+
+    //    // Act
+    //    await pageModel.OnGetAsync();
+
+    //    // Assert
+    //    Assert.Null(pageModel.CurrentLocationWeather);
+    //    Assert.Equal("Liberec", pageModel.CurrentLocation);
+    //}
+
+    //[Fact]
+    //public async Task OnPostAsync_WeatherServiceFails_SetsCurrentWeatherToNull()
+    //{
+    //    // Arrange
+    //    var dbContext = GetInMemoryDbContext("TestDatabase_OnPostAsync_WeatherServiceFails_SetsCurrentWeatherToNull");
+    //    var pageModel = new IndexModel(_mockWeatherApiService.Object, dbContext);
+
+    //    var city = "Prague";
+
+    //    _mockWeatherApiService.Setup(service => service.GetWeatherAsync(city))
+    //        .ThrowsAsync(new System.Exception("Service failure"));
+
+    //    pageModel.IsPremium = true;
+
+    //    // Act
+    //    var result = await pageModel.OnPostAsync(city);
+
+    //    // Assert
+    //    Assert.Null(pageModel.CurrentWeather);
+    //    Assert.Null(pageModel.HistoricalWeatherList);
+    //}
+}

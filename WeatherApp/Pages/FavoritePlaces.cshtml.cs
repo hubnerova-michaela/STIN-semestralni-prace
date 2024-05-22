@@ -65,6 +65,15 @@ namespace WeatherApp.Pages
                 return Unauthorized();
             }
 
+            // Check if the city is already a favorite place for the user
+            var existingFavorite = await _dbContext.FavoritePlaces
+                .FirstOrDefaultAsync(fp => fp.City == city && fp.UserId == user.Id);
+
+            if (existingFavorite != null)
+            {
+                return RedirectToPage();
+            }
+
             var favoritePlace = new FavoritePlace
             {
                 City = city,
