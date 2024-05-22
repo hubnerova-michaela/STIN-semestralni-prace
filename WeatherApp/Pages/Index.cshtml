@@ -6,6 +6,21 @@
 
 <h2>Weather Forecast</h2>
 
+<div style="position: fixed; top: 50; right: 0; background-color: lightgray; padding: 10px;">
+    <h2>Current Location Weather</h2>
+    @if (Model.CurrentLocationWeather != null)
+    {
+        <p><strong>Location:</strong> @Model.CurrentLocation</p>
+        <p><strong>Condition:</strong> @Model.CurrentLocationWeather.Current.Condition.Text</p>
+        <p><img src="@Model.CurrentLocationWeather.Current.Condition.Icon" alt="Weather icon" /></p>
+        <p><strong>Temperature:</strong> @Model.CurrentLocationWeather.Current.TempC &deg;C (@Model.CurrentLocationWeather.Current.TempF &deg;F)</p>
+    }
+    else
+    {
+        <p>Loading weather information...</p>
+    }
+</div>
+
 <form method="post">
     <label for="city">Enter city name:</label>
     <input type="hidden" asp-for="IsPremium" />

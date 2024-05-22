@@ -14,14 +14,16 @@
                 Hello @User.Identity?.Name!
                 @if (isPremium)
                 {
-                    <span class="text-success">✔️ You are already a Premium user</span>
-                    <li class="nav-item">
-                    <a class="nav-link text-dark" asp-area="" asp-page="/FavoritePlaces">My Favorite Places</a>
-                    </li>
-                    
+                    <span class="text-success">✔️ You are already a Premium user</span>     
                 }
             </a>
         </li>
+        @if (isPremium)
+        {
+            <li class="nav-item">
+                <a class="nav-link text-dark" asp-area="" asp-page="/FavoritePlaces">My Favorite Places</a>
+            </li>
+        }
         @if (!isPremium)
         {
             <li class="nav-item">

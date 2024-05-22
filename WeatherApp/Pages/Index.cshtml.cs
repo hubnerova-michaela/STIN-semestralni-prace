@@ -18,13 +18,16 @@ public class IndexModel : PageModel
 
     [BindProperty]
     public CurrentWeather CurrentWeather { get; set; }
-
+    public CurrentWeather CurrentLocationWeather { get; set; }
+    public string CurrentLocation { get; set; }
     [BindProperty(SupportsGet = true)]
     public bool IsPremium { get; set; }
     public List<HistoricalWeather> HistoricalWeatherList { get; set; }
 
     public async Task OnGetAsync()
     {
+        CurrentLocationWeather = await _weatherApiService.GetWeatherAsync("Liberec");
+        CurrentLocation = "Liberec";
         if (User.Identity.IsAuthenticated)
         {
             //var user = await _userManager.GetUserAsync(User);
