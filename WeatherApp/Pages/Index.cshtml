@@ -1,0 +1,63 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Weather Forecast";
+}
+
+<h2>Weather Forecast</h2>
+
+<div style="position: fixed; top: 50; right: 0; background-color: lightgray; padding: 10px;">
+    <h2>Current Location Weather</h2>
+    @if (Model.CurrentLocationWeather != null)
+    {
+        <p><strong>Location:</strong> @Model.CurrentLocation</p>
+        <p><strong>Condition:</strong> @Model.CurrentLocationWeather.Current.Condition.Text</p>
+        <p><img src="@Model.CurrentLocationWeather.Current.Condition.Icon" alt="Weather icon" /></p>
+        <p><strong>Temperature:</strong> @Model.CurrentLocationWeather.Current.TempC &deg;C (@Model.CurrentLocationWeather.Current.TempF &deg;F)</p>
+    }
+    else
+    {
+        <p>Loading weather information...</p>
+    }
+</div>
+
+<form method="post">
+    <label for="city">Enter city name:</label>
+    <input type="hidden" asp-for="IsPremium" />
+    <input type="text" id="city" name="city" required />
+    <button type="submit">Get Weather</button>
+</form>
+
+@if (Model.CurrentWeather != null)
+{
+    <h3>Current Weather for @Model.CurrentWeather.Location.Name</h3>
+    <p>Temperature: @Model.CurrentWeather.Current.TempC°C</p>
+    <p>Condition: @Model.CurrentWeather.Current.Condition.Text</p>
+    <img src="@Model.CurrentWeather.Current.Condition.Icon" alt="Weather Icon" />
+}
+
+@if (Model.IsPremium && Model.HistoricalWeatherList != null)
+{
+    <h3>Weather History (Past 7 Days)</h3>
+    <ul>
+        @foreach (var history in Model.HistoricalWeatherList)
+        {
+            <li>
+                <strong>@history.Location.Name</strong><br />
+                Date: @history.Forecast.ForecastDays[0].Date<br />
+                Max Temp: @history.Forecast.ForecastDays[0].Day.MaxTempC°C<br />
+                Min Temp: @history.Forecast.ForecastDays[0].Day.MinTempC°C<br />
+                Avg Temp: @history.Forecast.ForecastDays[0].Day.AvgTempC°C<br />
+                Condition: @history.Forecast.ForecastDays[0].Day.Condition.Text<br />
+            </li>
+        }
+    </ul>
+}
+else if (Model.IsPremium && Model.HistoricalWeatherList == null)
+{
+    <p>No historical weather data available.</p>
+}
+else
+{
+    <p>You need to be a premium user to view weather history.</p>
+}

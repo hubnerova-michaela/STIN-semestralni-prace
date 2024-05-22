@@ -1,0 +1,48 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using WeatherApp.Model
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+<ul class="navbar-nav">
+    @if (SignInManager.IsSignedIn(User))
+    {
+        var user = await UserManager.GetUserAsync(User);
+        var isPremium = user?.IsPremium ?? false;
+
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Manage/Index" title="Manage">
+                Hello @User.Identity?.Name!
+                @if (isPremium)
+                {
+                    <span class="text-success">✔️ You are already a Premium user</span>     
+                }
+            </a>
+        </li>
+        @if (isPremium)
+        {
+            <li class="nav-item">
+                <a class="nav-link text-dark" asp-area="" asp-page="/FavoritePlaces">My Favorite Places</a>
+            </li>
+        }
+        @if (!isPremium)
+        {
+            <li class="nav-item">
+                <a class="nav-link text-dark" asp-area="" asp-page="/Premium">Become Premium</a>
+            </li>
+        }
+        <li class="nav-item">
+            <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/Index", new { area = "" })">
+                <button type="submit" class="nav-link btn btn-link text-dark">Logout</button>
+            </form>
+        </li>
+    }
+    else
+    {
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Register">Register</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">Login</a>
+        </li>
+    }
+</ul>
