@@ -12,12 +12,21 @@ namespace WeatherApp.Services
         public readonly IOptions<WeatherApiConfiguration> _configuration;
 
         public WeatherApiService(IOptions<WeatherApiConfiguration> configuration)
+        : this(configuration, new HttpClient { BaseAddress = new Uri(configuration.Value.BaseUrl) }) { }
+
+        public WeatherApiService(IOptions<WeatherApiConfiguration> configuration, HttpClient httpClient)
         {
             _configuration = configuration;
-            _httpClient = new HttpClient() { 
-                BaseAddress = new Uri(_configuration.Value.BaseUrl)
-            };
+            _httpClient = httpClient;
         }
+
+        //public WeatherApiService(IOptions<WeatherApiConfiguration> configuration)
+        //{
+        //    _configuration = configuration;
+        //    _httpClient = new HttpClient() { 
+        //        BaseAddress = new Uri(_configuration.Value.BaseUrl)
+        //    };
+        //}
         public async Task<CurrentWeather> GetWeatherAsync(string city)
         {
             var response = await _httpClient.GetAsync($"current.json?q={city}&key={_configuration.Value.ApiKey}");
