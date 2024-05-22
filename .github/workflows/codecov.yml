@@ -21,25 +21,25 @@ jobs:
 
     - name: Obnovit závislosti
       run: dotnet restore
-      working-directory: WeatherApp/WeatherApp.Tests
+      working-directory: WeatherApp.Tests
 
     - name: Instalovat coverlet.collector
       run: dotnet add package coverlet.collector
-      working-directory: WeatherApp/WeatherApp.Tests
+      working-directory: WeatherApp.Tests
 
     - name: Sestavit
       run: dotnet build --no-restore --configuration Release
-      working-directory: WeatherApp/WeatherApp.Tests
+      working-directory: WeatherApp.Tests
 
     - name: Spustit testy s pokrytím kódu
       run: dotnet test --no-build --configuration Release --collect:"XPlat Code Coverage"
-      working-directory: WeatherApp/WeatherApp.Tests
+      working-directory: WeatherApp.Tests
 
     - name: Nahrát pokrytí na Codecov
       uses: codecov/codecov-action@v2
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: WeatherApp/WeatherApp.Tests/TestResults/**/coverage.cobertura.xml
+        files: WeatherApp.Tests/TestResults/**/coverage.cobertura.xml
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: true
