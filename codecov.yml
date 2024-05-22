@@ -1,0 +1,14 @@
+codecov:
+  name: .NET Core
+
+ignore:
+  - "WeatherApp/Areas"  
+  - "WeatherApp/Pages/Shared"
+  - "WeatherApp/Migrations"
+  - "WeatherApp/Program.cs"
+  - "WeatherApp/Pages/Error.cshtml"
+  - "WeatherApp/Pages/Error.cshtml.cs"
+  - "WeatherApp/Pages/Privacy.cshtml"
+  - "WeatherApp/Pages/Privacy.cshtml.cs"
+  - "WeatherApp/Pages/Index.cshtml"
+  - "WeatherApp/Pages/FavoritePlaces.cshtml"
