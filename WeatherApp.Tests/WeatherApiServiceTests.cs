@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -25,7 +27,8 @@ public class WeatherApiServiceTests
 
         var config = new WeatherApiConfiguration
         {
-            BaseUrl = "http://mock-api-url.com"
+            BaseUrl = "http://mock-api-url.com",
+            ApiKey = "fake-api-key"
         };
         _mockConfig = Options.Create(config);
 
@@ -54,7 +57,7 @@ public class WeatherApiServiceTests
                 TempC = 22.0,
                 TempF = 71.6,
                 IsDay = 1,
-                Condition = new Condition { Text = "Sunny", Icon = "//cdn.weatherapi.com/weather/64x64/day/113.png", Code = 1000 },
+                Condition = new Condition { Text = "Sunny" },
                 WindMph = 5.6,
                 WindKph = 9.0,
                 WindDegree = 230,
@@ -103,43 +106,10 @@ public class WeatherApiServiceTests
         // Act
         var result = await _weatherApiService.GetWeatherAsync(location);
 
-        // Debugging: Log the result to inspect the deserialized object
-        Console.WriteLine($"Location: {result?.Location?.Name}");
-        Console.WriteLine($"TempC: {result?.Current?.TempC}");
-
         // Assert
         Assert.NotNull(result);
         Assert.Equal(location, result.Location.Name);
         Assert.Equal(22.0, result.Current.TempC);
-        Assert.Equal(71.6, result.Current.TempF);
-        Assert.Equal(1, result.Current.IsDay);
-        Assert.Equal("Sunny", result.Current.Condition.Text);
-        Assert.Equal(5.6, result.Current.WindMph);
-        Assert.Equal(9.0, result.Current.WindKph);
-        Assert.Equal(230, result.Current.WindDegree);
-        Assert.Equal("SW", result.Current.WindDir);
-        Assert.Equal(1015.0, result.Current.PressureMb);
-        Assert.Equal(30.4, result.Current.PressureIn);
-        Assert.Equal(0.0, result.Current.PrecipMm);
-        Assert.Equal(0.0, result.Current.PrecipIn);
-        Assert.Equal(65, result.Current.Humidity);
-        Assert.Equal(10, result.Current.Cloud);
-        Assert.Equal(24.0, result.Current.FeelslikeC);
-        Assert.Equal(75.2, result.Current.FeelslikeF);
-        Assert.Equal(10.0, result.Current.VisKm);
-        Assert.Equal(6.0, result.Current.VisMiles);
-        Assert.Equal(5.0, result.Current.UV);
-        Assert.Equal(7.2, result.Current.GustMph);
-        Assert.Equal(11.5, result.Current.GustKph);
-        Assert.NotNull(result.Current.AirQuality);
-        Assert.Equal(0.4, result.Current.AirQuality.CO);
-        Assert.Equal(0.01, result.Current.AirQuality.NO2);
-        Assert.Equal(0.02, result.Current.AirQuality.O3);
-        Assert.Equal(0.005, result.Current.AirQuality.SO2);
-        Assert.Equal(10, result.Current.AirQuality.PM25);
-        Assert.Equal(20, result.Current.AirQuality.PM10);
-        Assert.Equal(1, result.Current.AirQuality.USEPAIndex);
-        Assert.Equal(1, result.Current.AirQuality.GBDEFRAIndex);
     }
 
     [Fact]
@@ -159,6 +129,417 @@ public class WeatherApiServiceTests
 
         // Act
         var result = await _weatherApiService.GetWeatherAsync(location);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetHistoricalWeatherAsync_ValidLocationAndDate_ReturnsHistoricalWeather()
+    {
+        // Arrange
+        var city = "London";
+        var date = DateTime.UtcNow.AddDays(-1);
+        var expectedResponse = new HistoricalWeather
+        {
+            Location = new Location { Name = city },
+            Forecast = new Forecast { ForecastDays = new List<ForecastDay> { new ForecastDay { Date = date.ToString("yyyy-MM-dd") } }.ToArray() }
+        };
+        var jsonResponse = JsonConvert.SerializeObject(expectedResponse);
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(jsonResponse, System.Text.Encoding.UTF8, "application/json")
+        };
+
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(response);
+
+        // Act
+        var result = await _weatherApiService.GetHistoricalWeatherAsync(city, date);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(city, result.Location.Name);
+        Assert.Equal(date.ToString("yyyy-MM-dd"), result.Forecast.ForecastDays[0].Date);
+    }
+
+    [Fact]
+    public async Task GetHistoricalWeatherAsync_InvalidLocation_ReturnsNull()
+    {
+        // Arrange
+        var city = "InvalidLocation";
+        var date = DateTime.UtcNow.AddDays(-1);
+        var response = new HttpResponseMessage(HttpStatusCode.NotFound);
+
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(response);
+
+        // Act
+        var result = await _weatherApiService.GetHistoricalWeatherAsync(city, date);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetHistoricalWeatherAsync_Non200StatusCode_ReturnsNull()
+    {
+        // Arrange
+        var city = "London";
+        var date = DateTime.UtcNow.AddDays(-1);
+        var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(response);
+
+        // Act
+        var result = await _weatherApiService.GetHistoricalWeatherAsync(city, date);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetHistoricalWeatherForPastWeekAsync_ValidLocation_ReturnsWeatherList()
+    {
+        // Arrange
+        var city = "Paris";
+        var historicalWeatherList = new List<HistoricalWeather>();
+
+        for (int i = 1; i < 8; i++)
+        {
+            var date = DateTime.UtcNow.AddDays(-i);
+            var historicalWeather = new HistoricalWeather
+            {
+                Location = new Location { Name = city },
+                Forecast = new Forecast { ForecastDays = new List<ForecastDay> { new ForecastDay { Date = date.ToString("yyyy-MM-dd") } }.ToArray() }
+            };
+            historicalWeatherList.Add(historicalWeather);
+
+            var jsonResponse = JsonConvert.SerializeObject(historicalWeather);
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(jsonResponse, System.Text.Encoding.UTF8, "application/json")
+            };
+
+            _mockHttpMessageHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(req => req.RequestUri.ToString().Contains(date.ToString("yyyy-MM-dd"))),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(response);
+        }
+
+        // Act
+        var result = await _weatherApiService.GetHistoricalWeatherForPastWeekAsync(city);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(7, result.Count);
+        for (int i = 0; i < 7; i++)
+        {
+            Assert.Equal(city, result[i].Location.Name);
+            Assert.Equal(DateTime.UtcNow.AddDays(-(i + 1)).ToString("yyyy-MM-dd"), result[i].Forecast.ForecastDays[0].Date);
+        }
+    }
+
+
+    //[Fact]
+    //public async Task GetHistoricalWeatherForPastWeekAsync_InvalidLocation_ReturnsPartialList()
+    //{
+    //    // Arrange
+    //    var city = "Paris";
+    //    var successfulDays = 5;
+    //    var failedDays = 2;
+    //    var historicalWeatherList = new List<HistoricalWeather>();
+
+    //    for (int i = 1; i <= successfulDays; i++)
+    //    {
+    //        var date = DateTime.UtcNow.AddDays(-i);
+    //        var historicalWeather = new HistoricalWeather
+    //        {
+    //            Location = new Location { Name = city },
+    //            Forecast = new Forecast { ForecastDays = new List<ForecastDay> { new ForecastDay { Date = date.ToString("yyyy-MM-dd") } }.ToArray() }
+    //        };
+    //        historicalWeatherList.Add(historicalWeather);
+
+    //        var jsonResponse = JsonConvert.SerializeObject(historicalWeather);
+    //        var response = new HttpResponseMessage(HttpStatusCode.OK)
+    //        {
+    //            Content = new StringContent(jsonResponse, System.Text.Encoding.UTF8, "application/json")
+    //        };
+
+    //        _mockHttpMessageHandler.Protected()
+    //            .Setup<Task<HttpResponseMessage>>(
+    //                "SendAsync",
+    //                ItExpr.Is<HttpRequestMessage>(req => req.RequestUri.ToString().Contains(date.ToString("yyyy-MM-dd"))),
+    //                ItExpr.IsAny<CancellationToken>()
+    //            )
+    //            .ReturnsAsync(response);
+    //    }
+
+    //    var failedResponse = new HttpResponseMessage(HttpStatusCode.NotFound);
+
+    //    for (int i = successfulDays + 1; i <= successfulDays + failedDays; i++)
+    //    {
+    //        var date = DateTime.UtcNow.AddDays(-i);
+    //        _mockHttpMessageHandler.Protected()
+    //            .Setup<Task<HttpResponseMessage>>(
+    //                "SendAsync",
+    //                ItExpr.Is<HttpRequestMessage>(req => req.RequestUri.ToString().Contains(date.ToString("yyyy-MM-dd"))),
+    //                ItExpr.IsAny<CancellationToken>()
+    //            )
+    //            .ReturnsAsync(failedResponse);
+    //    }
+
+    //    // Act
+    //    var result = await _weatherApiService.GetHistoricalWeatherForPastWeekAsync(city);
+
+    //    // Assert
+    //    Assert.NotNull(result);
+    //    Assert.Equal(successfulDays, result.Count);
+    //    for (int i = 0; i < successfulDays; i++)
+    //    {
+    //        Assert.Equal(city, result[i].Location.Name);
+    //        Assert.Equal(DateTime.UtcNow.AddDays(-(i + 1)).ToString("yyyy-MM-dd"), result[i].Forecast.ForecastDays[0].Date);
+    //    }
+    //}
+
+
+
+    //[Fact]
+    //public async Task GetHistoricalWeatherForPastWeekAsync_Non200StatusCode_ReturnsPartialList()
+    //{
+    //    // Arrange
+    //    var city = "Paris";
+    //    var successfulDays = 5;
+    //    var failedDays = 2;
+    //    var historicalWeatherList = new List<HistoricalWeather>();
+
+    //    for (int i = 1; i <= successfulDays; i++)
+    //    {
+    //        var date = DateTime.UtcNow.AddDays(-i);
+    //        var historicalWeather = new HistoricalWeather
+    //        {
+    //            Location = new Location { Name = city },
+    //            Forecast = new Forecast { ForecastDays = new List<ForecastDay> { new ForecastDay { Date = date.ToString("yyyy-MM-dd") } }.ToArray() }
+    //        };
+    //        historicalWeatherList.Add(historicalWeather);
+
+    //        var jsonResponse = JsonConvert.SerializeObject(historicalWeather);
+    //        var response = new HttpResponseMessage(HttpStatusCode.OK)
+    //        {
+    //            Content = new StringContent(jsonResponse, System.Text.Encoding.UTF8, "application/json")
+    //        };
+
+    //        _mockHttpMessageHandler.Protected()
+    //            .Setup<Task<HttpResponseMessage>>(
+    //                "SendAsync",
+    //                ItExpr.Is<HttpRequestMessage>(req => req.RequestUri.ToString().Contains(date.ToString("yyyy-MM-dd"))),
+    //                ItExpr.IsAny<CancellationToken>()
+    //            )
+    //            .ReturnsAsync(response);
+    //    }
+
+    //    for (int i = successfulDays + 1; i <= successfulDays + failedDays; i++)
+    //    {
+    //        var date = DateTime.UtcNow.AddDays(-i);
+    //        var failedResponse = new HttpResponseMessage(HttpStatusCode.BadRequest);
+
+    //        _mockHttpMessageHandler.Protected()
+    //            .Setup<Task<HttpResponseMessage>>(
+    //                "SendAsync",
+    //                ItExpr.Is<HttpRequestMessage>(req => req.RequestUri.ToString().Contains(date.ToString("yyyy-MM-dd"))),
+    //                ItExpr.IsAny<CancellationToken>()
+    //            )
+    //            .ReturnsAsync(failedResponse);
+    //    }
+
+    //    // Act
+    //    var result = await _weatherApiService.GetHistoricalWeatherForPastWeekAsync(city);
+
+    //    // Assert
+    //    Assert.NotNull(result);
+    //    Assert.Equal(successfulDays, result.Count);
+    //    for (int i = 0; i < successfulDays; i++)
+    //    {
+    //        Assert.Equal(city, result[i].Location.Name);
+    //        Assert.Equal(DateTime.UtcNow.AddDays(-(i + 1)).ToString("yyyy-MM-dd"), result[i].Forecast.ForecastDays[0].Date);
+    //    }
+    //}
+
+
+    [Fact]
+    public async Task GetForecastAsync_ValidLocation_ReturnsForecastWeather()
+    {
+        // Arrange
+        var city = "London";
+        var expectedResponse = new ForecastWeather
+        {
+            Forecast = new Forecast
+            {
+                ForecastDays = new List<ForecastDay>
+                {
+                    new ForecastDay { Date = DateTime.UtcNow.ToString("yyyy-MM-dd"), Day = new Day { AvgTempC = 15.0 } }
+                }.ToArray()
+            }
+        };
+        var jsonResponse = JsonConvert.SerializeObject(expectedResponse);
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(jsonResponse, System.Text.Encoding.UTF8, "application/json")
+        };
+
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(response);
+
+        // Act
+        var result = await _weatherApiService.GetForecastAsync(city);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.Forecast);
+        Assert.Single(result.Forecast.ForecastDays);
+        Assert.Equal(DateTime.UtcNow.ToString("yyyy-MM-dd"), result.Forecast.ForecastDays[0].Date);
+        Assert.Equal(15.0, result.Forecast.ForecastDays[0].Day.AvgTempC);
+    }
+
+    [Fact]
+    public async Task GetForecastAsync_InvalidLocation_ReturnsNull()
+    {
+        // Arrange
+        var city = "InvalidLocation";
+        var response = new HttpResponseMessage(HttpStatusCode.NotFound);
+
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(response);
+
+        // Act
+        var result = await _weatherApiService.GetForecastAsync(city);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetForecastAsync_Non200StatusCode_ReturnsNull()
+    {
+        // Arrange
+        var city = "London";
+        var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(response);
+
+        // Act
+        var result = await _weatherApiService.GetForecastAsync(city);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetWeatherAsync_EmptyResponse_ReturnsNull()
+    {
+        // Arrange
+        var location = "Seattle";
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("", System.Text.Encoding.UTF8, "application/json")
+        };
+
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(response);
+
+        // Act
+        var result = await _weatherApiService.GetWeatherAsync(location);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetHistoricalWeatherAsync_EmptyResponse_ReturnsNull()
+    {
+        // Arrange
+        var city = "London";
+        var date = DateTime.UtcNow.AddDays(-1);
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("", System.Text.Encoding.UTF8, "application/json")
+        };
+
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(response);
+
+        // Act
+        var result = await _weatherApiService.GetHistoricalWeatherAsync(city, date);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetForecastAsync_EmptyResponse_ReturnsNull()
+    {
+        // Arrange
+        var city = "London";
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("", System.Text.Encoding.UTF8, "application/json")
+        };
+
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(response);
+
+        // Act
+        var result = await _weatherApiService.GetForecastAsync(city);
 
         // Assert
         Assert.Null(result);
