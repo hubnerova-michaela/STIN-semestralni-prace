@@ -114,10 +114,21 @@ public class IndexModelTests
 
         pageModel.IsPremium = true;
 
+        var currentLocationWeather = new CurrentWeather
+        {
+            Location = new Location { Name = "Liberec" },
+            Current = new WeatherData { TempC = 10.0 }
+        };
+
+        _mockWeatherApiService.Setup(service => service.GetWeatherAsync("Liberec"))
+            .ReturnsAsync(currentLocationWeather);
+
         // Act
         var result = await pageModel.OnPostAsync(city);
 
         // Assert
+        Assert.Equal("Liberec", pageModel.CurrentLocation);
+        Assert.Equal(currentLocationWeather, pageModel.CurrentLocationWeather);
         Assert.NotNull(pageModel.CurrentWeather);
         Assert.Equal(city, pageModel.CurrentWeather.Location.Name);
         Assert.Equal(12.0, pageModel.CurrentWeather.Current.TempC);
@@ -147,10 +158,21 @@ public class IndexModelTests
 
         pageModel.IsPremium = false;
 
+        var currentLocationWeather = new CurrentWeather
+        {
+            Location = new Location { Name = "Liberec" },
+            Current = new WeatherData { TempC = 10.0 }
+        };
+
+        _mockWeatherApiService.Setup(service => service.GetWeatherAsync("Liberec"))
+            .ReturnsAsync(currentLocationWeather);
+
         // Act
         var result = await pageModel.OnPostAsync(city);
 
         // Assert
+        Assert.Equal("Liberec", pageModel.CurrentLocation);
+        Assert.Equal(currentLocationWeather, pageModel.CurrentLocationWeather);
         Assert.NotNull(pageModel.CurrentWeather);
         Assert.Equal(city, pageModel.CurrentWeather.Location.Name);
         Assert.Equal(12.0, pageModel.CurrentWeather.Current.TempC);
@@ -166,72 +188,22 @@ public class IndexModelTests
 
         string city = string.Empty;
 
+        var currentLocationWeather = new CurrentWeather
+        {
+            Location = new Location { Name = "Liberec" },
+            Current = new WeatherData { TempC = 10.0 }
+        };
+
+        _mockWeatherApiService.Setup(service => service.GetWeatherAsync("Liberec"))
+            .ReturnsAsync(currentLocationWeather);
+
         // Act
         var result = await pageModel.OnPostAsync(city);
 
         // Assert
+        Assert.Equal("Liberec", pageModel.CurrentLocation);
+        Assert.Equal(currentLocationWeather, pageModel.CurrentLocationWeather);
         Assert.Null(pageModel.CurrentWeather);
         Assert.Null(pageModel.HistoricalWeatherList);
     }
-
-    //[Fact]
-    //public async Task OnGetAsync_NonAuthenticatedUser_SetsIsPremiumToFalse()
-    //{
-    //    // Arrange
-    //    var dbContext = GetInMemoryDbContext("TestDatabase_OnGetAsync_NonAuthenticatedUser_SetsIsPremiumToFalse");
-    //    var pageModel = new IndexModel(_mockWeatherApiService.Object, dbContext);
-    //    SetUserClaims(pageModel, null, false);
-
-    //    // Act
-    //    await pageModel.OnGetAsync();
-
-    //    // Assert
-    //    Assert.False(pageModel.IsPremium);
-    //}
-
-    //[Fact]
-    //public async Task OnGetAsync_WeatherServiceFails_SetsCurrentLocationWeatherToNull()
-    //{
-    //    // Arrange
-    //    var dbContext = GetInMemoryDbContext("TestDatabase_OnGetAsync_WeatherServiceFails_SetsCurrentLocationWeatherToNull");
-    //    var pageModel = new IndexModel(_mockWeatherApiService.Object, dbContext);
-
-    //    _mockWeatherApiService.Setup(service => service.GetWeatherAsync("Liberec"))
-    //        .ThrowsAsync(new System.Exception("Service failure"));
-
-    //    SetUserClaims(pageModel, "user1", true);
-
-    //    var user = new ApplicationUser { Id = "user1", IsPremium = true };
-    //    await dbContext.Users.AddAsync(user);
-    //    await dbContext.SaveChangesAsync();
-
-    //    // Act
-    //    await pageModel.OnGetAsync();
-
-    //    // Assert
-    //    Assert.Null(pageModel.CurrentLocationWeather);
-    //    Assert.Equal("Liberec", pageModel.CurrentLocation);
-    //}
-
-    //[Fact]
-    //public async Task OnPostAsync_WeatherServiceFails_SetsCurrentWeatherToNull()
-    //{
-    //    // Arrange
-    //    var dbContext = GetInMemoryDbContext("TestDatabase_OnPostAsync_WeatherServiceFails_SetsCurrentWeatherToNull");
-    //    var pageModel = new IndexModel(_mockWeatherApiService.Object, dbContext);
-
-    //    var city = "Prague";
-
-    //    _mockWeatherApiService.Setup(service => service.GetWeatherAsync(city))
-    //        .ThrowsAsync(new System.Exception("Service failure"));
-
-    //    pageModel.IsPremium = true;
-
-    //    // Act
-    //    var result = await pageModel.OnPostAsync(city);
-
-    //    // Assert
-    //    Assert.Null(pageModel.CurrentWeather);
-    //    Assert.Null(pageModel.HistoricalWeatherList);
-    //}
 }
