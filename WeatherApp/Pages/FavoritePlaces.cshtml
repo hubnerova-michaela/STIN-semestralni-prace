@@ -6,13 +6,29 @@
 
 <h2>Manage Favorite Places</h2>
 
+
+@if (User.Identity.IsAuthenticated && Model.FavoritePlaces.Count < 5)
+{
+    <h3>Add New Favorite Place</h3>
+    <form method="post" asp-page-handler="SaveFavorite">
+        <div class="form-group">
+            <label for="city">City:</label>
+            <input type="text" id="city" name="city" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Favorite</button>
+    </form>
+}
+else if (Model.FavoritePlaces.Count >= 5)
+{
+    <p>You have reached the maximum limit of favorite places.</p>
+}
+
 @if (Model.FavoritePlaces.Any())
 {
     <table class="table">
         <thead>
             <tr>
                 <th>City</th>
-                <th>Current Weather</th>
                 <th>Forecast (7 Days)</th>
                 <th></th>
             </tr>
@@ -23,19 +39,18 @@
                 <tr>
                     <td>@favoritePlace.City</td>
                     <td>
-                        <!-- Display current weather -->
-                    </td>
-                    <td>
                         <ul>
                             @foreach (var forecastDay in Model.FavoritePlacesForecasts[favoritePlace.City].ForecastDays)
                             {
                                 @if (DateTime.TryParse(forecastDay.Date, out DateTime parsedDate))
                                 {
                                     <li>@parsedDate.ToShortDateString(): @forecastDay.Day.AvgTempC°C, @forecastDay.Day.Condition.Text</li>
+                                    <p><img src="@forecastDay.Day.Condition.Icon" alt="Weather icon" /></p>
                                 }
                                 else
                                 {
-                                    <li>Invalid Date: @forecastDay.Day.AvgTempC°C, @forecastDay.Day.Condition.Text</li>
+                                    <li>Invalid Date: @forecastDay.Day.AvgTempC°C, @forecastDay.Day.Condition.Text </li>
+                                    <p><img src="@forecastDay.Day.Condition.Icon" alt="Weather icon" /></p>
                                 }
                             }
                         </ul>
@@ -55,18 +70,4 @@ else
     <p>No favorite places saved yet.</p>
 }
 
-@if (User.Identity.IsAuthenticated && Model.FavoritePlaces.Count < 5)
-{
-    <h3>Add New Favorite Place</h3>
-    <form method="post" asp-page-handler="SaveFavorite">
-        <div class="form-group">
-            <label for="city">City:</label>
-            <input type="text" id="city" name="city" class="form-control" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Save Favorite</button>
-    </form>
-}
-else if (Model.FavoritePlaces.Count >= 5)
-{
-    <p>You have reached the maximum limit of favorite places.</p>
-}
+
