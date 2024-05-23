@@ -47,6 +47,8 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostAsync(string city)
     {
+        CurrentLocationWeather = await _weatherApiService.GetWeatherAsync("Liberec");
+        CurrentLocation = "Liberec";
         if (!string.IsNullOrWhiteSpace(city))
         {
             CurrentWeather = await _weatherApiService.GetWeatherAsync(city);
